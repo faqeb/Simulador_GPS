@@ -106,11 +106,11 @@ def start_simulation():
         accuracy = 100 if (index % 10) == 0 else 0
 
         rpm = None
-        fuel = random.randint(0, 80)
+        fuel = 80
         driverUniqueId = None  # Optional driver unique ID
 
         try:
-            send(id, lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy)
+            send(id, lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
         except Exception as e:
             print(f"Error sending data: {e}")
             break  # Salir del bucle si hay un error
