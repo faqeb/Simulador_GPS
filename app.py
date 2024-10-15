@@ -3,6 +3,11 @@ import math
 import time
 import random
 import requests
+from gevent import monkey
+import gevent
+
+# Realiza el parcheo para que las operaciones sean no bloqueantes
+monkey.patch_all()
 
 app = Flask(__name__)
 
@@ -115,7 +120,7 @@ def start_simulation():
             print(f"Error sending data: {e}")
             return jsonify({'error': 'fallo al enviar información a Traccar.'}), 500
 
-        time.sleep(period)
+         gevent.sleep(period)
         index += 1
 
     return jsonify({'message': 'Simulación completada'}), 200
