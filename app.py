@@ -87,7 +87,7 @@ def start_simulation():
     id = data.get('id')  # The ID of the vehicle
 
     if not id or id not in routes:
-        return jsonify({'error': 'Please provide a valid ID with a generated route'}), 400
+        return jsonify({'error': 'Proporcionar un ID que tenga asociado una ruta'}), 400
 
     points = routes[id]
     index = 0
@@ -102,23 +102,24 @@ def start_simulation():
         # Fijar valores según lo solicitado
         alarm = False
         battery = 100  # Fijar batería al 100%
-        ignition = None  # O fijar en False si prefieres
+        ignition = False  # O fijar en None si prefieres
         accuracy = 100 if (index % 10) == 0 else 0
 
-        rpm = None
+        rpm = None  # Puede eliminarse si no es necesario
         fuel = 80
-        driverUniqueId = None  # Optional driver unique ID
+        driverUniqueId = None  # ID único del conductor opcional
 
         try:
             send(id, lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
         except Exception as e:
             print(f"Error sending data: {e}")
-            break  # Salir del bucle si hay un error
+            return jsonify({'error': 'fallo al enviar información a Traccar.'}), 500
 
         time.sleep(period)
         index += 1
 
-    return "Simulacion completada"
+    return jsonify({'message': 'Simulación completada'}), 200
+
 
 
 if __name__ == '__main__':
