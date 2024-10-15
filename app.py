@@ -120,7 +120,7 @@ def start_simulation():
             print(f"Error sending data: {e}")
             return jsonify({'error': 'fallo al enviar información a Traccar.'}), 500
 
-         gevent.sleep(period)
+        gevent.sleep(period)
         index += 1
 
     return jsonify({'message': 'Simulación completada'}), 200
