@@ -125,6 +125,48 @@ def start_simulation():
 
     return jsonify({'message': 'Simulación completada'}), 200
 
+@app.route('/update-devices-location', methods=['POST'])
+def update_devices_location():
+    traccar_url = 'http://demo.traccar.org/api/devices'
+    traccar_auth = ('usuario', 'contraseña')  # Sustituir con tus credenciales de Traccar
+
+    # Hacer solicitud para obtener todos los dispositivos de Traccar
+    try:
+        response = requests.get(traccar_url, auth=traccar_auth)
+        if response.status_code != 200:
+            return jsonify({'error': 'No se pudieron obtener los dispositivos de Traccar'}), 500
+        
+        devices = response.json()
+    except Exception as e:
+        return jsonify({'error': f'Error al obtener dispositivos: {e}'}), 500
+
+    # Última ubicación fija
+    lat = -34.532911
+    lon = -58.703249
+
+    # Actualizar cada dispositivo con la nueva ubicación
+    for device in devices:
+        try:
+            send(
+                id=device['id'],
+                lat=lat,
+                lon=lon,
+                altitude=50,            # Valor de altitud predeterminado
+                course=0,               # Valor de curso predeterminado
+                speed=0,                # Sin movimiento
+                battery=100,            # Nivel de batería al 100%
+                alarm=False,            # Sin alarma
+                ignition=False,         # Ignición apagada
+                accuracy=100,           # Precisión fija
+                rpm=None,               # Sin RPM
+                fuel=80,                # Combustible al 80%
+                driverUniqueId=None     # Sin conductor asignado
+            )
+        except Exception as e:
+            print(f"Error actualizando el dispositivo {device['id']}: {e}")
+    
+    return jsonify({'message': 'Ubicación actualizada para todos los dispositivos'}), 200
+
 
 
 if __name__ == '__main__':
