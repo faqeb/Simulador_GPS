@@ -94,8 +94,8 @@ def start_simulation():
     max_points = len(points)
 
     while index < max_points:
-        (lat1, lon1) = points[index]
-        (lat2, lon2) = points[(index + 1) % max_points]  # Usar % para evitar índice fuera de rango
+        (lon1, lat1) = points[index]
+        (lon2, lat2) = points[(index + 1) % max_points]  # Usar % para evitar índice fuera de rango
         altitude = 50
         speed = device_speed if (index % max_points) != 0 else 0
         
