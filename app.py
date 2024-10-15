@@ -78,26 +78,30 @@ def send_to_traccar(device_id, lat, lon, course, speed, battery):
 # Endpoint para iniciar el envío de datos a Traccar
 @app.route('/start_gps', methods=['GET'])
 def start_sending_data():
-    points = generate_interpolated_points(waypoints, step)
-    index = 0
-    total_points = len(points)
+    try:
+        points = generate_interpolated_points(waypoints, step)
+        index = 0
+        total_points = len(points)
 
-    while index < total_points:
-        (lat1, lon1) = points[index % total_points]
-        (lat2, lon2) = points[(index + 1) % total_points]
-        course_angle = calculate_course(lat1, lon1, lat2, lon2)
-        speed = random.uniform(20, 40)  # Velocidad simulada
-        battery = random.randint(0, 100)  # Batería simulada
+        while index < total_points:
+            (lat1, lon1) = points[index % total_points]
+            (lat2, lon2) = points[(index + 1) % total_points]
+            course_angle = calculate_course(lat1, lon1, lat2, lon2)
+            speed = random.uniform(20, 40)  # Velocidad simulada
+            battery = random.randint(0, 100)  # Batería simulada
 
-        print(f"Enviando coordenadas: lat={lat1}, lon={lon1}, course={course_angle}, speed={speed}, battery={battery}")
-        response = send_to_traccar(device_id, lat1, lon1, course_angle, speed, battery)
-        print(f"Respuesta de Traccar: {response}")
+            print(f"Enviando coordenadas: lat={lat1}, lon={lon1}, course={course_angle}, speed={speed}, battery={battery}")
+            response = send_to_traccar(device_id, lat1, lon1, course_angle, speed, battery)
+            print(f"Respuesta de Traccar: {response}")
 
-        time.sleep(10)  # Espera 10 segundos entre cada envío
-        index += 1
+            time.sleep(10)  # Espera 10 segundos entre cada envío
+            index += 1
 
-    return jsonify({"message": "Datos enviados a Traccar"})
-
+        return jsonify({"message": "Datos enviados a Traccar"})
+    
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
