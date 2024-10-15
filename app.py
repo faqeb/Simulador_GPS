@@ -1,11 +1,10 @@
-#!/usr/bin/env python3
-
-import sys
+from flask import Flask
 import math
-import urllib
-import http.client as httplib
 import time
 import random
+import requests
+
+app = Flask(__name__)
 
 id = 'ABC789'
 server = 'http://demo.traccar.org:5055'
@@ -35,26 +34,28 @@ for i in range(0, len(waypoints)):
         lon = lon1 + (lon2 - lon1) * j / count
         points.append((lat, lon))
 
-def send(conn, lat, lon, altitude, course, speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId):
-    params = (('id', id), ('timestamp', int(time.time())), ('lat', lat), ('lon', lon), ('altitude', altitude), ('bearing', course), ('speed', speed), ('batt', battery))
-    if alarm:
-        params = params + (('alarm', 'sos'),)
-    if ignition:
-        params = params + (('ignition', 'true'),)
-    else:
-        params = params + (('ignition', 'false'),)
-    if accuracy:
-        params = params + (('accuracy', accuracy),)
-    if rpm:
-        params = params + (('rpm', rpm),)
-    if fuel:
-        params = params + (('fuel', fuel),)
-    if driverUniqueId:
-        params = params + (('driverUniqueId', driverUniqueId),)
-    conn.request('GET', '?' + urllib.parse.urlencode(params))
-    conn.getresponse().read()
+def send(lat, lon, altitude, course, speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId):
+    params = {
+        'id': id,
+        'timestamp': int(time.time()),
+        'lat': lat,
+        'lon': lon,
+        'altitude': altitude,
+        'bearing': course,
+        'speed': speed,
+        'batt': battery,
+        'alarm': 'sos' if alarm else None,
+        'ignition': 'true' if ignition else 'false',
+        'accuracy': accuracy if accuracy else None,
+        'rpm': rpm if rpm else None,
+        'fuel': fuel if fuel else None,
+        'driverUniqueId': driverUniqueId if driverUniqueId else None
+    }
+    # Filtrar parámetros vacíos
+    params = {k: v for k, v in params.items() if v is not None}
+    requests.get(server, params=params)
 
-def course(lat1, lon1, lat2, lon2):
+def calculate_course(lat1, lon1, lat2, lon2):
     lat1 = lat1 * math.pi / 180
     lon1 = lon1 * math.pi / 180
     lat2 = lat2 * math.pi / 180
@@ -63,22 +64,26 @@ def course(lat1, lon1, lat2, lon2):
     x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(lon2 - lon1)
     return (math.atan2(y, x) % (2 * math.pi)) * 180 / math.pi
 
-index = 0
+@app.route('/start-simulation')
+def start_simulation():
+    index = 0
+    while True:
+        (lat1, lon1) = points[index % len(points)]
+        (lat2, lon2) = points[(index + 1) % len(points)]
+        altitude = 50
+        speed = device_speed if (index % len(points)) != 0 else 0
+        alarm = (index % 10) == 0
+        battery = random.randint(0, 100)
+        ignition = (index / 10 % 2) != 0
+        accuracy = 100 if (index % 10) == 0 else 0
+        rpm = random.randint(500, 4000)
+        fuel = random.randint(0, 80)
+        driverUniqueId = driver_id if (index % len(points)) == 0 else False
+        send(lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
+        time.sleep(period)
+        index += 1
 
-conn = httplib.HTTPConnection(server)
+    return "Simulation started!"
 
-while True:
-    (lat1, lon1) = points[index % len(points)]
-    (lat2, lon2) = points[(index + 1) % len(points)]
-    altitude = 50
-    speed = device_speed if (index % len(points)) != 0 else 0
-    alarm = (index % 10) == 0
-    battery = random.randint(0, 100)
-    ignition = (index / 10 % 2) != 0
-    accuracy = 100 if (index % 10) == 0 else 0
-    rpm = random.randint(500, 4000)
-    fuel = random.randint(0, 80)
-    driverUniqueId = driver_id if (index % len(points)) == 0 else False
-    send(conn, lat1, lon1, altitude, course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
-    time.sleep(period)
-    index += 1
+if __name__ == '__main__':
+    app.run(debug=True)
