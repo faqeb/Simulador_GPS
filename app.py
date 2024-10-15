@@ -87,30 +87,39 @@ def start_simulation():
     id = data.get('id')  # The ID of the vehicle
 
     if not id or id not in routes:
-        return jsonify({'error': 'Se necesita un ID valido y una ruta generada'}), 400
+        return jsonify({'error': 'Please provide a valid ID with a generated route'}), 400
 
     points = routes[id]
     index = 0
-    while True:
-        # OSRM devuelve las coordenadas como (lon, lat), necesitamos invertirlas para lat, lon
-        (lon1, lat1) = points[index % len(points)]
-        (lon2, lat2) = points[(index + 1) % len(points)]
+    max_points = len(points)
+
+    while index < max_points:
+        (lat1, lon1) = points[index]
+        (lat2, lon2) = points[(index + 1) % max_points]  # Usar % para evitar índice fuera de rango
         altitude = 50
-        speed = device_speed if (index % len(points)) != 0 else 0
-        alarm = (index % 10) == 0
-        battery = random.randint(0, 100)
-        ignition = (index / 10 % 2) != 0
+        speed = device_speed if (index % max_points) != 0 else 0
+        
+        # Fijar valores según lo solicitado
+        alarm = False
+        battery = 100  # Fijar batería al 100%
+        ignition = None  # O fijar en False si prefieres
         accuracy = 100 if (index % 10) == 0 else 0
-        rpm = random.randint(500, 4000)
+
+        rpm = None
         fuel = random.randint(0, 80)
         driverUniqueId = None  # Optional driver unique ID
 
-        send(id, lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
+        try:
+            send(id, lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy)
+        except Exception as e:
+            print(f"Error sending data: {e}")
+            break  # Salir del bucle si hay un error
 
         time.sleep(period)
         index += 1
 
-    return "Simulación iniciada"
+    return "Simulacion completada"
+
 
 if __name__ == '__main__':
     app.run(debug=True)
