@@ -151,7 +151,7 @@ def update_devices_location():
     for device in devices:
         try:
             send(
-                id=device['id'],
+                id=device['uniqueId'],
                 lat=lat,
                 lon=lon,
                 altitude=50,            # Valor de altitud predeterminado
