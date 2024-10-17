@@ -197,7 +197,7 @@ def update_location():
 
     try:
         # Llamada a la función send() para actualizar la ubicación en Traccar
-        send(id, lat), floatlon, altitude, 0, speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
+        send(id, lat, lon, altitude, 0, speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
     except Exception as e:
         print(f"Error al enviar los datos a Traccar: {e}")
         return jsonify({'error': 'Fallo al enviar la ubicación a Traccar.'}), 500
