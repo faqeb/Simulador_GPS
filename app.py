@@ -170,6 +170,39 @@ def update_devices_location():
     
     return jsonify({'message': 'Ubicación actualizada para todos los dispositivos'}), 200
 
+    from decimal import Decimal
+
+# Endpoint to update device location via GET request
+@app.route('/update-gps-location', methods=['GET'])
+def update_location():
+    # Obtener los parámetros de la URL
+    lat = request.args.get('lat', type=str)
+    lon = request.args.get('lon', type=str)
+    id = request.args.get('id', type=str)
+
+    # Validar los parámetros
+    if not lat or not lon or not id:
+        return jsonify({'error': 'Faltan parámetros lat, lon o id'}), 400
+
+    # Valores fijos o de ejemplo para la actualización
+    altitude = 50  # Altitud por defecto
+    speed = 0      # Velocidad fija, ajustable según necesidad
+    battery = 100  # Batería al 100%
+    alarm = False
+    ignition = False
+    accuracy = 100
+    rpm = None
+    fuel = 80
+    driverUniqueId = None  # ID único del conductor opcional
+
+    try:
+        # Llamada a la función send() para actualizar la ubicación en Traccar
+        send(id, lat), floatlon, altitude, 0, speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
+    except Exception as e:
+        print(f"Error al enviar los datos a Traccar: {e}")
+        return jsonify({'error': 'Fallo al enviar la ubicación a Traccar.'}), 500
+
+    return jsonify({'message': f'Ubicación del dispositivo {id} actualizada a lat: {lat}, lon: {lon}'}), 200
 
 
 if __name__ == '__main__':
