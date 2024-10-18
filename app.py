@@ -139,19 +139,22 @@ def upload_trip():
     data = request.get_json()
     id = data.get('id')  # ID del vehículo
     time_str = data.get('time')  # Fecha en formato legible "YYYY-MM-DD HH:mm:ss"
-    conn = httplib.HTTPConnection(server)
+
     if not id or id not in routes:
         return jsonify({'error': 'Proporcionar un ID que tenga asociado una ruta'}), 400
 
-  # Convertir el string de fecha a un objeto datetime y luego a UNIX timestamp
+    # Convertir el string de fecha a un objeto datetime y luego a UNIX timestamp
     try:
-        time_unix = time.mktime(datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S").timetuple())# Convertir a UNIX timestamp
+        time_unix = time.mktime(datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S").timetuple())  # Convertir a UNIX timestamp
     except ValueError:
         return jsonify({'error': 'Formato de fecha incorrecto. Usar "YYYY-MM-DD HH:mm:ss"'}), 400
 
     points = routes[id]
     index = 0
     max_points = len(points)
+
+    # Crear la conexión
+    conn = httplib.HTTPConnection(server)
 
     while index < max_points:
         (lon1, lat1) = points[index]
@@ -186,19 +189,24 @@ def upload_trip():
                 'datos': {
                     'id': id,
                     'timestamp': _time,
-                    'lat': lat,
-                    'lon': lon,
+                    'lat': lat1,
+                    'lon': lon1,
                     'speed': speed
                 }
             }), 500
+
         index += 1
 
-    return jsonify({'message': 'Simulación completada'}), 200
+    # Cerrar la conexión
+    conn.close()
     
+    return jsonify({'message': 'Simulación completada'}), 200
+
 def send_trip(id, conn, _time, lat, lon, speed):
     params = (('id', id), ('timestamp', int(_time)), ('lat', lat), ('lon', lon), ('speed', speed))
-    params = {k: v for k, v in params.items() if v is not None}
-    requests.get(server, params=params)
+    conn.request('POST', '?' + urllib.parse.urlencode(params))
+    conn.getresponse().read()
+
 
 
 @app.route('/update-devices-location', methods=['POST'])
