@@ -38,7 +38,7 @@ def obtener_ruta_osrm(start, end):
 def send(id, _time, lat, lon, altitude, course, speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId):
     params = {
         'id': id,
-        'timestamp': int(_time.time()),
+        'timestamp': _time,
         'lat': lat,
         'lon': lon,
         'altitude': altitude,
