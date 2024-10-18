@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import math
 import time
+import datetime
 import random
 import requests
 from gevent import monkey
@@ -140,8 +141,7 @@ def upload_trip():
 
   # Convertir el string de fecha a un objeto datetime y luego a UNIX timestamp
     try:
-        start_time = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
-        time_unix = time.mktime(start_time.timetuple())  # Convertir a UNIX timestamp
+        time_unix = time.mktime(datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S").timetuple())# Convertir a UNIX timestamp
     except ValueError:
         return jsonify({'error': 'Formato de fecha incorrecto. Usar "YYYY-MM-DD HH:mm:ss"'}), 400
 
