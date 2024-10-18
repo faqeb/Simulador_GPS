@@ -166,7 +166,7 @@ def upload_trip():
             time_to_next_point_seconds = 0  # Si no hay velocidad, no se incrementa el tiempo
 
         # Actualizar el tiempo simulado para el siguiente punto
-        simulated_time = time_unix + time_to_next_point_seconds
+        _time = time_unix + time_to_next_point_seconds
 
         alarm = False
         battery = 100
@@ -178,7 +178,7 @@ def upload_trip():
 
         try:
             # Enviar la información con el tiempo calculado
-            send(id, simulated_time, lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
+            send(id, _time, lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
         except Exception as e:
             print(f"Error sending data: {e}")
             return jsonify({'error': 'Fallo al enviar información a Traccar.'}), 500
