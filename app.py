@@ -174,7 +174,7 @@ def upload_trip():
 
         try:
             # Enviar la información con el tiempo calculado
-            send(id, conn, _time, lat, lon, speed)
+            send_trip(id, conn, _time, lat, lon, speed)
         except Exception as e:
             error_message = str(e)
             print(f"Error sending data: {error_message}")
@@ -195,7 +195,7 @@ def upload_trip():
 
     return jsonify({'message': 'Simulación completada'}), 200
     
-def send(id, conn, time, lat, lon, speed):
+def send_trip(id, conn, time, lat, lon, speed):
     params = (('id', id), ('timestamp', int(time)), ('lat', lat), ('lon', lon), ('speed', speed))
     conn.request('POST', '?' + urllib.parse.urlencode(params))
     conn.getresponse().read()
