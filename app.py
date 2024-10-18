@@ -153,15 +153,13 @@ def upload_trip():
     index = 0
     max_points = len(points)
 
-    # Crear la conexión
-    conn = httplib.HTTPConnection(server)
 
     while index < max_points:
         (lon1, lat1) = points[index]
         (lon2, lat2) = points[(index + 1) % max_points]  # Usar % para evitar índice fuera de rango
 
         speed = device_speed if (index % max_points) != 0 else 0
-
+        altitude = 50
         # Calcular la distancia entre dos puntos (lat1, lon1) y (lat2, lon2)
         distance_km = calculate_distance(lat1, lon1, lat2, lon2)
 
@@ -174,10 +172,18 @@ def upload_trip():
 
         # Actualizar el tiempo simulado para el siguiente punto
         _time = time_unix + time_to_next_point_seconds
-
+        
+        alarm = False
+        battery = 100
+        ignition = False
+        accuracy = 100 if (index % 10) == 0 else 0
+        rpm = None
+        fuel = 80
+        driverUniqueId = None
         try:
             # Enviar la información con el tiempo calculado
-            send_trip(id, conn, _time, lat1, lon1, speed)
+            send(id, _time, lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
+
         except Exception as e:
             error_message = str(e)
             print(f"Error sending data: {error_message}")
@@ -197,15 +203,8 @@ def upload_trip():
 
         index += 1
 
-    # Cerrar la conexión
-    conn.close()
     
     return jsonify({'message': 'Simulación completada'}), 200
-
-def send_trip(id, conn, _time, lat, lon, speed):
-    params = (('id', id), ('timestamp', int(_time)), ('lat', lat), ('lon', lon), ('speed', speed))
-    conn.request('POST', '?' + urllib.parse.urlencode(params))
-    conn.getresponse().read()
 
 
 
