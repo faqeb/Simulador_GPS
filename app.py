@@ -7,6 +7,9 @@ import requests
 from gevent import monkey
 import gevent
 
+import urllib
+import http.client as httplib
+
 # Realiza el parcheo para que las operaciones sean no bloqueantes
 monkey.patch_all()
 
