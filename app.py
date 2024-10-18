@@ -154,7 +154,7 @@ def send_trip(id, timestamp, lat, lon, speed):
     }
 
     # Hacer la solicitud POST con autenticación
-    requests.get(server, server)
+    requests.get(server,  params=params)
 
 @app.route('/upload-trip', methods=['GET'])
 def upload_trip():
