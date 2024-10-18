@@ -134,6 +134,21 @@ def start_simulation():
 
     return jsonify({'message': 'Simulación completada'}), 200
 
+def calculate_distance(lat1, lon1, lat2, lon2):
+    # Fórmula de Haversine para calcular la distancia entre dos puntos
+    R = 6371.0  # Radio de la Tierra en km
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * 
+         math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+def send_trip(conn, id, timestamp, lat, lon, speed):
+    params = (('id', id), ('timestamp', int(timestamp)), ('lat', lat), ('lon', lon), ('speed', speed))
+    conn.request('POST', '?' + urllib.parse.urlencode(params))
+    conn.getresponse().read()
+
 @app.route('/upload-trip', methods=['POST'])
 def upload_trip():
     data = request.get_json()
@@ -145,67 +160,39 @@ def upload_trip():
 
     # Convertir el string de fecha a un objeto datetime y luego a UNIX timestamp
     try:
-        time_unix = time.mktime(datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S").timetuple())  # Convertir a UNIX timestamp
+        time_unix = time.mktime(datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S").timetuple())
     except ValueError:
         return jsonify({'error': 'Formato de fecha incorrecto. Usar "YYYY-MM-DD HH:mm:ss"'}), 400
 
     points = routes[id]
     index = 0
     max_points = len(points)
-
+    conn = httplib.HTTPConnection('http://demo.traccar.org:5055')  # Conexión al servidor
 
     while index < max_points:
-        (lon1, lat1) = points[index]
-        (lon2, lat2) = points[(index + 1) % max_points]  # Usar % para evitar índice fuera de rango
+        (lon, lat) = points[index]
+        speed = device_speed if index != 0 else 0  # Velocidad 0 para el primer punto
 
-        speed = device_speed if (index % max_points) != 0 else 0
-        altitude = 50
-        # Calcular la distancia entre dos puntos (lat1, lon1) y (lat2, lon2)
-        distance_km = calculate_distance(lat1, lon1, lat2, lon2)
-
-        # Si el dispositivo está en movimiento, calcular el tiempo para el siguiente punto
-        if speed > 0:
-            time_to_next_point = distance_km / speed  # Tiempo en horas
+        # Calcular la distancia entre dos puntos (lat1, lon1) y (lat2, lon2) 
+        if index < max_points - 1:
+            (lon2, lat2) = points[index + 1]
+            distance_km = calculate_distance(lat, lon, lat2, lon2)
+            time_to_next_point = distance_km / speed if speed > 0 else 0  # Tiempo en horas
             time_to_next_point_seconds = time_to_next_point * 3600  # Convertir a segundos
         else:
-            time_to_next_point_seconds = 0  # Si no hay velocidad, no se incrementa el tiempo
+            time_to_next_point_seconds = 0  # Último punto
 
-        # Actualizar el tiempo simulado para el siguiente punto
-        _time = time_unix + time_to_next_point_seconds
-        
-        alarm = False
-        battery = 100
-        ignition = False
-        accuracy = 100 if (index % 10) == 0 else 0
-        rpm = None
-        fuel = 80
-        driverUniqueId = None
-        try:
-            # Enviar la información con el tiempo calculado
-            send(id, _time, lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
+        # Enviar el punto al servidor
+        send_trip(conn, id, time_unix, lat, lon, speed)
 
-        except Exception as e:
-            error_message = str(e)
-            print(f"Error sending data: {error_message}")
-            
-            # Incluir los datos intentados en la respuesta
-            return jsonify({
-                'error': 'Fallo al enviar información a Traccar.',
-                'details': error_message,
-                'datos': {
-                    'id': id,
-                    'timestamp': _time,
-                    'lat': lat1,
-                    'lon': lon1,
-                    'speed': speed
-                }
-            }), 500
-
+        # Actualizar el tiempo para el siguiente punto
+        time_unix += time_to_next_point_seconds
         index += 1
 
-    
-    return jsonify({'message': 'Simulación completada'}), 200
+    return jsonify({"status": "success", "message": "Ruta subida exitosamente"}), 200
 
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
 
 
 @app.route('/update-devices-location', methods=['POST'])
@@ -285,28 +272,6 @@ def update_location():
 
     return jsonify({'message': f'Ubicación del dispositivo {id} actualizada a lat: {lat}, lon: {lon}'}), 200
     
-def calculate_distance(lat1, lon1, lat2, lon2):
-    # Radio de la Tierra en kilómetros
-    R = 6371.0
-
-    # Convertir grados a radianes
-    lat1_rad = math.radians(lat1)
-    lon1_rad = math.radians(lon1)
-    lat2_rad = math.radians(lat2)
-    lon2_rad = math.radians(lon2)
-
-    # Diferencias entre las coordenadas
-    dlat = lat2_rad - lat1_rad
-    dlon = lon2_rad - lon1_rad
-
-    # Fórmula de haversine
-    a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
-    # Distancia en kilómetros
-    distance = R * c
-
-    return distance
 
 if __name__ == '__main__':
     app.run(debug=True)
