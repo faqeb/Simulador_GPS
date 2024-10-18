@@ -133,61 +133,60 @@ def start_simulation():
 def upload_trip():
     data = request.get_json()
     id = data.get('id')  # ID del vehículo
-    start_time = data.get('time')  # Tiempo de inicio (timestamp)
+    time_str = data.get('time')  # Fecha en formato legible "YYYY-MM-DD HH:mm:ss"
 
     if not id or id not in routes:
         return jsonify({'error': 'Proporcionar un ID que tenga asociado una ruta'}), 400
+
+  # Convertir el string de fecha a un objeto datetime y luego a UNIX timestamp
+    try:
+        start_time = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+        time_unix = time.mktime(start_time.timetuple())  # Convertir a UNIX timestamp
+    except ValueError:
+        return jsonify({'error': 'Formato de fecha incorrecto. Usar "YYYY-MM-DD HH:mm:ss"'}), 400
 
     points = routes[id]
     index = 0
     max_points = len(points)
 
-    # Convertir el tiempo inicial a un objeto datetime
-    current_time = datetime.datetime.fromtimestamp(start_time)
-
     while index < max_points:
         (lon1, lat1) = points[index]
         (lon2, lat2) = points[(index + 1) % max_points]  # Usar % para evitar índice fuera de rango
+        altitude = 50
+        speed = device_speed if (index % max_points) != 0 else 0
 
-        # Calcular la distancia entre los dos puntos en kilómetros
-        distance_km = geodesic((lat1, lon1), (lat2, lon2)).km
+        # Calcular la distancia entre dos puntos (lat1, lon1) y (lat2, lon2)
+        distance_km = calculate_distance(lat1, lon1, lat2, lon2)
 
-        # Suponiendo que 'device_speed' está en km/h, calculamos el tiempo necesario para recorrer esa distancia
-        if device_speed > 0:
-            time_to_next_point = distance_km / device_speed  # Tiempo en horas
+        # Si el dispositivo está en movimiento, calcular el tiempo para el siguiente punto
+        if speed > 0:
+            time_to_next_point = distance_km / speed  # Tiempo en horas
             time_to_next_point_seconds = time_to_next_point * 3600  # Convertir a segundos
         else:
             time_to_next_point_seconds = 0  # Si no hay velocidad, no se incrementa el tiempo
 
-        altitude = 50
-        speed = device_speed if (index % max_points) != 0 else 0
-        
-        # Fijar valores según lo solicitado
-        alarm = False
-        battery = 100  # Fijar batería al 100%
-        ignition = False  # O fijar en None si prefieres
-        accuracy = 100 if (index % 10) == 0 else 0
+        # Actualizar el tiempo simulado para el siguiente punto
+        simulated_time = time_unix + time_to_next_point_seconds
 
-        rpm = None  # Puede eliminarse si no es necesario
+        alarm = False
+        battery = 100
+        ignition = False
+        accuracy = 100 if (index % 10) == 0 else 0
+        rpm = None
         fuel = 80
-        driverUniqueId = None  # ID único del conductor opcional
+        driverUniqueId = None
 
         try:
-            # Enviar los datos con el tiempo actualizado
-            send(id, current_time.timestamp(), lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
+            # Enviar la información con el tiempo calculado
+            send(id, simulated_time, lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
         except Exception as e:
             print(f"Error sending data: {e}")
-            return jsonify({'error': 'fallo al enviar información a Traccar.'}), 500
+            return jsonify({'error': 'Fallo al enviar información a Traccar.'}), 500
 
-        # Incrementar el tiempo para el siguiente punto
-        current_time += datetime.timedelta(seconds=time_to_next_point_seconds)
-
-        # Simular espera antes de enviar el siguiente punto
         gevent.sleep(period)
         index += 1
 
     return jsonify({'message': 'Simulación completada'}), 200
-
 
 @app.route('/update-devices-location', methods=['POST'])
 def update_devices_location():
