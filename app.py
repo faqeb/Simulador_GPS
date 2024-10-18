@@ -180,8 +180,9 @@ def upload_trip():
             # Enviar la información con el tiempo calculado
             send(id, _time, lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
         except Exception as e:
-            print(f"Error sending data: {e}")
-            return jsonify({'error': 'Fallo al enviar información a Traccar.'}), 500
+            error_message = str(e)
+            print(f"Error sending data: {error_message}")
+            return jsonify({'error': 'Fallo al enviar información a Traccar.', 'details': error_message}), 500
 
         gevent.sleep(period)
         index += 1
