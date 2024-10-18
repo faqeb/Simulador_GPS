@@ -175,7 +175,19 @@ def upload_trip():
         except Exception as e:
             error_message = str(e)
             print(f"Error sending data: {error_message}")
-            return jsonify({'error': 'Fallo al enviar información a Traccar.', 'details': error_message}), 500
+            
+            # Incluir los datos intentados en la respuesta
+            return jsonify({
+                'error': 'Fallo al enviar información a Traccar.',
+                'details': error_message,
+                'datos': {
+                    'id': id,
+                    'timestamp': _time,
+                    'lat': lat,
+                    'lon': lon,
+                    'speed': speed
+                }
+            }), 500
         index += 1
 
     return jsonify({'message': 'Simulación completada'}), 200
