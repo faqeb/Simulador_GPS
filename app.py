@@ -144,7 +144,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
-def send_trip(conn, id, timestamp, lat, lon, speed):
+def send_trip(id, timestamp, lat, lon, speed):
     params = {
         'id': id,
         'timestamp': int(timestamp),
@@ -154,15 +154,12 @@ def send_trip(conn, id, timestamp, lat, lon, speed):
     }
 
     # Hacer la solicitud POST con autenticación
-    response = requests.post(conn, params=params, auth=(username, password))
+    requests.get(server, server)
 
-    return response.text
-
-@app.route('/upload-trip', methods=['POST'])
+@app.route('/upload-trip', methods=['GET'])
 def upload_trip():
-    data = request.get_json()
-    id = data.get('id')  # ID del vehículo
-    time_str = data.get('time')  # Fecha en formato legible "YYYY-MM-DD HH:mm:ss"
+    id = request.args.get('id', type=str)
+    time_str = request.args.get('start_time', type=str)  # Fecha en formato legible "YYYY-MM-DD HH:mm:ss"
 
     if not id or id not in routes:
         return jsonify({'error': 'Proporcionar un ID que tenga asociado una ruta'}), 400
@@ -176,7 +173,6 @@ def upload_trip():
     points = routes[id]
     index = 0
     max_points = len(points)
-    conn = httplib.HTTPConnection('http://demo.traccar.org:5055')  # Conexión al servidor
 
     while index < max_points:
         (lon, lat) = points[index]
@@ -192,7 +188,7 @@ def upload_trip():
             time_to_next_point_seconds = 0  # Último punto
 
         # Enviar el punto al servidor
-        send_trip(conn, id, time_unix, lat, lon, speed)
+        send_trip(id, time_unix, lat, lon, speed)
 
         # Actualizar el tiempo para el siguiente punto
         time_unix += time_to_next_point_seconds
