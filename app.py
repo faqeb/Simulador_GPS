@@ -197,8 +197,8 @@ def upload_trip():
     
 def send_trip(id, conn, _time, lat, lon, speed):
     params = (('id', id), ('timestamp', int(_time)), ('lat', lat), ('lon', lon), ('speed', speed))
-    conn.request('POST', '?' + urllib.parse.urlencode(params))
-    conn.getresponse().read()
+    params = {k: v for k, v in params.items() if v is not None}
+    requests.get(server, params=params)
 
 
 @app.route('/update-devices-location', methods=['POST'])
