@@ -35,10 +35,10 @@ def obtener_ruta_osrm(start, end):
         return None
 
 # Send data to Traccar server
-def send(id, time, lat, lon, altitude, course, speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId):
+def send(id, _time, lat, lon, altitude, course, speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId):
     params = {
         'id': id,
-        'timestamp': int(time.time()),
+        'timestamp': int(_time.time()),
         'lat': lat,
         'lon': lon,
         'altitude': altitude,
@@ -102,7 +102,7 @@ def start_simulation():
     max_points = len(points)
 
     while index < max_points:
-        time =  int(time.time())
+        _time =  int(time.time())
         (lon1, lat1) = points[index]
         (lon2, lat2) = points[(index + 1) % max_points]  # Usar % para evitar índice fuera de rango
         altitude = 50
@@ -119,7 +119,7 @@ def start_simulation():
         driverUniqueId = None  # ID único del conductor opcional
 
         try:
-            send(id, time, lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
+            send(id, _time, lat1, lon1, altitude, calculate_course(lat1, lon1, lat2, lon2), speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
         except Exception as e:
             print(f"Error sending data: {e}")
             return jsonify({'error': 'fallo al enviar información a Traccar.'}), 500
@@ -212,6 +212,7 @@ def update_devices_location():
         try:
             send(
                 id=device['uniqueId'],
+                _time=int(time.time()),
                 lat=lat,
                 lon=lon,
                 altitude=50,            # Valor de altitud predeterminado
@@ -243,7 +244,7 @@ def update_location():
     # Validar los parámetros
     if not lat or not lon or not id:
         return jsonify({'error': 'Faltan parámetros lat, lon o id'}), 400
-    time =  int(time.time())
+    _time =  int(time.time())
     # Valores fijos o de ejemplo para la actualización
     altitude = 50  # Altitud por defecto
     speed = 0      # Velocidad fija, ajustable según necesidad
@@ -257,7 +258,7 @@ def update_location():
 
     try:
         # Llamada a la función send() para actualizar la ubicación en Traccar
-        send(id, time, lat, lon, altitude, 0, speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
+        send(id, _time, lat, lon, altitude, 0, speed, battery, alarm, ignition, accuracy, rpm, fuel, driverUniqueId)
     except Exception as e:
         print(f"Error al enviar los datos a Traccar: {e}")
         return jsonify({'error': 'Fallo al enviar la ubicación a Traccar.'}), 500
