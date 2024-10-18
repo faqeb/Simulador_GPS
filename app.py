@@ -145,9 +145,18 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     return R * c
 
 def send_trip(conn, id, timestamp, lat, lon, speed):
-    params = (('id', id), ('timestamp', int(timestamp)), ('lat', lat), ('lon', lon), ('speed', speed))
-    conn.request('POST', '?' + urllib.parse.urlencode(params))
-    conn.getresponse().read()
+    params = {
+        'id': id,
+        'timestamp': int(timestamp),
+        'lat': lat,
+        'lon': lon,
+        'speed': speed
+    }
+
+    # Hacer la solicitud POST con autenticación
+    response = requests.post(conn, params=params, auth=(username, password))
+
+    return response.text
 
 @app.route('/upload-trip', methods=['POST'])
 def upload_trip():
