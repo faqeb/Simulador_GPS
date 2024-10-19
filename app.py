@@ -203,7 +203,7 @@ if __name__ == '__main__':
 @app.route('/update-devices-location', methods=['POST'])
 def update_devices_location():
     traccar_url = 'http://demo.traccar.org/api/devices'
-    traccar_auth = (user, password)  # Sustituir con tus credenciales de Traccar
+    traccar_auth = (user, password) 
 
     # Hacer solicitud para obtener todos los dispositivos de Traccar
     try:
@@ -276,6 +276,44 @@ def update_location():
         return jsonify({'error': 'Fallo al enviar la ubicación a Traccar.'}), 500
 
     return jsonify({'message': f'Ubicación del dispositivo {id} actualizada a lat: {lat}, lon: {lon}'}), 200
+
+@app.route('/upload-and-generate', methods=['POST'])
+def upload_and_generate():
+    start = request.json.get('start')  # Coordenadas de inicio (lat, lon)
+    end = request.json.get('end')      # Coordenadas de destino (lat, lon)
+    time_str = request.json.get('start_time')  # Fecha en formato "YYYY-MM-DD HH:mm:ss"
+    
+    if not start or not end or not time_str:
+        return jsonify({'error': 'Se necesita start, end y start_time'}), 400
+
+    traccar_url = 'http://demo.traccar.org/api/devices'
+    traccar_auth = (user, password) 
+
+    # Hacer solicitud para obtener todos los dispositivos de Traccar
+    try:
+        response = requests.get(traccar_url, auth=traccar_auth)
+        if response.status_code != 200:
+            return jsonify({'error': 'No se pudieron obtener los dispositivos de Traccar'}), 500
+        
+        devices = response.json()
+    except Exception as e:
+        return jsonify({'error': f'Error al obtener dispositivos: {e}'}), 500
+
+    for device in devices:
+        device_id = device['uniqueId']
+        
+        # Llamar al endpoint de generación de ruta
+        route_response = generate_route(start, end)
+        if route_response[1] != 200:
+            return route_response  # Retornar el error de generate_route
+
+        # Llamar al endpoint de subida de viaje
+        upload_response = upload_trip(device_id, time_str)
+        if upload_response[1] != 200:
+            return upload_response  # Retornar el error de upload_trip
+
+    return jsonify({"status": "success", "message": "Rutas generadas y subidas exitosamente para todos los vehículos."}), 200
+
     
 
 if __name__ == '__main__':
