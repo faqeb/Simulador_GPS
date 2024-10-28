@@ -40,47 +40,50 @@ def simulate_viaje(viaje_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    query = """
-    SELECT v.ViajeId, ve.Patente, v.LatitudSalida, v.LongitudSalida, v.LatitudLlegada, v.LongitudLlegada
-    FROM Viajes v
-    JOIN Vehiculos ve ON v.VehiculoId = ve.VehiculoId
-    WHERE v.ViajeId = ?
-    """
-    
-    cursor.execute(query, viaje_id)
-    viaje_info = cursor.fetchone()
-    
-    if viaje_info:
-        # Captura de los datos necesarios
-        data = {
-            'start': (viaje_info.LatitudSalida, viaje_info.LongitudSalida),
-            'end': (viaje_info.LatitudLlegada, viaje_info.LongitudLlegada),
-            'id': viaje_info.Patente
-        }
+    try:
+        query = """
+        SELECT v.ViajeId, ve.Patente, v.LatitudSalida, v.LongitudSalida, v.LatitudLlegada, v.LongitudLlegada
+        FROM Viajes v
+        JOIN Vehiculos ve ON v.VehiculoId = ve.VehiculoId
+        WHERE v.ViajeId = ?
+        """
         
-        # Llamar al endpoint de generate_route
-        response = requests.post('https://simulador-gps.onrender.com/generate-route', json=data)
+        cursor.execute(query, viaje_id)
+        viaje_info = cursor.fetchone()
         
-        if response.status_code != 200:
-            return jsonify({'error': 'Error al generar la ruta', 'details': response.json()}), response.status_code
+        if viaje_info:
+            # Captura de los datos necesarios
+            data = {
+                'start': (viaje_info.LatitudSalida, viaje_info.LongitudSalida),
+                'end': (viaje_info.LatitudLlegada, viaje_info.LongitudLlegada),
+                'id': viaje_info.Patente
+            }
+            
+            # Llamar al endpoint de generate_route
+            response = requests.post('https://simulador-gps.onrender.com/generate-route', json=data)
+            
+            if response.status_code != 200:
+                return jsonify({'error': 'Error al generar la ruta', 'details': response.json()}), response.status_code
 
-        # Preparar datos para iniciar la simulación
-        data2 = {
-            'id': viaje_info.Patente
-        }
-        
-        # Llamar al endpoint de start-simulation
-        response2 = requests.post('https://simulador-gps.onrender.com/start-simulation', json=data2)
-        
-        if response2.status_code != 200:
-            return jsonify({'error': 'Error al iniciar la simulación', 'details': response2.json()}), response2.status_code
+            # Preparar datos para iniciar la simulación
+            data2 = {
+                'id': viaje_info.Patente
+            }
+            
+            # Llamar al endpoint de start-simulation
+            response2 = requests.post('https://simulador-gps.onrender.com/start-simulation', json=data2)
+            
+            if response2.status_code != 200:
+                return jsonify({'error': 'Error al iniciar la simulación', 'details': response2.json()}), response2.status_code
 
-        return jsonify({'message': 'Simulación iniciada exitosamente', 'data': data}), 200
-    else:
-        return jsonify({'error': 'Viaje no encontrado'}), 404
+            return jsonify({'message': 'Simulación iniciada exitosamente', 'data': data}), 200
+        else:
+            return jsonify({'error': 'Viaje no encontrado'}), 404
+
     finally:
         cursor.close()
         conn.close()
+
 
         
 # Function to generate points using OSRM (Open Source Routing Machine)
