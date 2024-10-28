@@ -6,7 +6,7 @@ import random
 import requests
 from gevent import monkey
 import gevent
-
+from decimal import Decimal
 import urllib
 import http.client as httplib
 import pyodbc
@@ -48,14 +48,14 @@ def simulate_viaje(viaje_id):
         WHERE v.ViajeId = ?
         """
         
-        cursor.execute(query, viaje_id)
+        cursor.execute(query, (viaje_id,))
         viaje_info = cursor.fetchone()
         
         if viaje_info:
-            # Captura de los datos necesarios
+            # Convertir los valores a float si son Decimal
             data = {
-                'start': (viaje_info.LatitudSalida, viaje_info.LongitudSalida),
-                'end': (viaje_info.LatitudLlegada, viaje_info.LongitudLlegada),
+                'start': (float(viaje_info.LatitudSalida), float(viaje_info.LongitudSalida)),
+                'end': (float(viaje_info.LatitudLlegada), float(viaje_info.LongitudLlegada)),
                 'id': viaje_info.Patente
             }
             
