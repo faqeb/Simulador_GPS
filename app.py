@@ -9,6 +9,7 @@ import gevent
 
 import urllib
 import http.client as httplib
+import pyodbc
 
 # Realiza el parcheo para que las operaciones sean no bloqueantes
 monkey.patch_all()
@@ -57,20 +58,30 @@ def simulate_viaje(viaje_id):
             'id': viaje_info.Patente
         }
         
-        # Llamar a las funciones usando los datos capturados
-        generate_route(data)  # Llama a la función existente
+        # Llamar al endpoint de generate_route
+        response = requests.post('https://simulador-gps.onrender.com/generate-route', json=data)
+        
+        if response.status_code != 200:
+            return jsonify({'error': 'Error al generar la ruta', 'details': response.json()}), response.status_code
 
-        data = {
+        # Preparar datos para iniciar la simulación
+        data2 = {
             'id': viaje_info.Patente
         }
-        start_simulation(data)  # Llama a la función existente
         
-        return jsonify(data), 200
+        # Llamar al endpoint de start-simulation
+        response2 = requests.post('https://simulador-gps.onrender.com/start-simulation', json=data2)
+        
+        if response2.status_code != 200:
+            return jsonify({'error': 'Error al iniciar la simulación', 'details': response2.json()}), response2.status_code
+
+        return jsonify({'message': 'Simulación iniciada exitosamente', 'data': data}), 200
     else:
         return jsonify({'error': 'Viaje no encontrado'}), 404
     finally:
         cursor.close()
         conn.close()
+
         
 # Function to generate points using OSRM (Open Source Routing Machine)
 def obtener_ruta_osrm(start, end):
