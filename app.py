@@ -43,8 +43,10 @@ def simulate_viaje(viaje_id):
     try:
         # Actualiza la consulta para incluir el JOIN con Properties
         query = """
-        SELECT v.*, p.LatitudTaller, p.LongitudTaller
+        SELECT v.*, ve.Patente, p.LatitudTaller, p.LongitudTaller
         FROM Viajes v
+        JOIN 
+        Vehiculos ve ON v.VehiculoId = ve.VehiculoId
         JOIN Properties p ON v.ClienteId = p.ClienteId
         WHERE v.ViajeId = ? AND p.Nombre = 'Ubicacion Taller';
         """
