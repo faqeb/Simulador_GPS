@@ -41,25 +41,45 @@ def simulate_viaje(viaje_id):
     cursor = conn.cursor()
     
     try:
+        # Actualiza la consulta para incluir el JOIN con Properties
         query = """
-        SELECT v.ViajeId, ve.Patente, v.LatitudSalida, v.LongitudSalida, v.LatitudLlegada, v.LongitudLlegada
+        SELECT v.*, p.LatitudTaller, p.LongitudTaller
         FROM Viajes v
-        JOIN Vehiculos ve ON v.VehiculoId = ve.VehiculoId
-        WHERE v.ViajeId = ?
+        JOIN Properties p ON v.ClienteId = p.ClienteId
+        WHERE v.ViajeId = ? AND p.Nombre = 'Ubicacion Taller';
         """
         
         cursor.execute(query, (viaje_id,))
         viaje_info = cursor.fetchone()
         
         if viaje_info:
-            # Convertir los valores a float si son Decimal
+            estado_viaje = viaje_info.EstadoViaje
+            
+            # Inicializa las coordenadas de inicio y fin
+            start = end = None
+            
+            if estado_viaje == "En camino al punto de partida":
+                start = (float(viaje_info.LatitudTaller), float(viaje_info.LongitudTaller))
+                end = (float(viaje_info.LatitudPuntoDePartida), float(viaje_info.LongitudPuntoDePartida))
+                
+            elif estado_viaje == "Comienzo del viaje":
+                start = (float(viaje_info.LatitudPuntoDePartida), float(viaje_info.LongitudPuntoDePartida))
+                end = (float(viaje_info.LatitudPuntoDeLlegada), float(viaje_info.LongitudPuntoDeLlegada))
+                
+            elif estado_viaje == "Llegada al destino y vuelta al predio":
+                start = (float(viaje_info.LatitudPuntoDeLlegada), float(viaje_info.LongitudPuntoDeLlegada))
+                end = (float(viaje_info.LatitudTaller), float(viaje_info.LongitudTaller))
+                
+            elif estado_viaje == "Finalizado":
+                return jsonify({'error': 'Este viaje ya se ha finalizado.'}), 400
+            
+            # Llamar al endpoint de generate_route
             data = {
-                'start': (float(viaje_info.LatitudSalida), float(viaje_info.LongitudSalida)),
-                'end': (float(viaje_info.LatitudLlegada), float(viaje_info.LongitudLlegada)),
+                'start': start,
+                'end': end,
                 'id': viaje_info.Patente
             }
             
-            # Llamar al endpoint de generate_route
             response = requests.post('https://simulador-gps.onrender.com/generate-route', json=data)
             
             if response.status_code != 200:
@@ -83,7 +103,6 @@ def simulate_viaje(viaje_id):
     finally:
         cursor.close()
         conn.close()
-
 
         
 # Function to generate points using OSRM (Open Source Routing Machine)
