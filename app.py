@@ -61,7 +61,9 @@ def simulate_viaje(viaje_id):
             start = end = None
 
             # Obtener la ubicación actual del vehículo usando el nuevo endpoint
-            start_response = requests.get(f'/ubicacion-vehiculo/{int(viaje_info.DeviceId)}')
+            device_id = int(viaje_info.DeviceId)
+            url = f'https://simulador-gps.onrender.com/ubicacion-vehiculo/{device_id}'  
+            start_response = requests.get(url)
             start_data = start_response.json()
 
             # Verifica si hubo un error al obtener la ubicación
