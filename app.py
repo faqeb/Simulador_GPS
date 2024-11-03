@@ -10,6 +10,7 @@ from decimal import Decimal
 import urllib
 import http.client as httplib
 import pyodbc
+from requests.auth import HTTPBasicAuth
 
 # Realiza el parcheo para que las operaciones sean no bloqueantes
 monkey.patch_all()
@@ -119,6 +120,7 @@ def simulate_viaje(viaje_id):
         conn.close()
 
 
+@app.route('/ubicacion-vehiculo/<int:device_id>', methods=['GET'])
 def obtener_ubicacion_actual_vehiculo(device_id):
     # Inicializa coordenadas como un diccionario
     coordenadas = {'latitud': None, 'longitud': None}
@@ -126,7 +128,7 @@ def obtener_ubicacion_actual_vehiculo(device_id):
     try:
         url = f"https://demo.traccar.org/api/positions?deviceId={device_id}"
         
-        # Realiza la solicitud con autenticación básica
+        # Realiza la solicitud GET con autenticación básica
         response = requests.get(url, auth=HTTPBasicAuth(user, password))
 
         if response.status_code == 200:
@@ -138,12 +140,15 @@ def obtener_ubicacion_actual_vehiculo(device_id):
                     coordenadas['longitud'] = posicion['longitude']
                     break
         else:
-            print(f"Error al obtener datos de Traccar: {response.status_code}")
+            return jsonify({'error': f"Error al obtener datos de Traccar: {response.status_code}"}), response.status_code
     
     except Exception as ex:
-        print(f"Excepción: {ex}")
+        return jsonify({'error': f"Excepción: {ex}"}), 500
 
-    return coordenadas
+    return jsonify(coordenadas)
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
 # Function to generate points using OSRM (Open Source Routing Machine)
 def obtener_ruta_osrm(start, end):
