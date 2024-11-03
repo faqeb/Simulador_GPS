@@ -43,7 +43,7 @@ def simulate_viaje(viaje_id):
     try:
         # Actualiza la consulta para incluir el JOIN con Properties
         query = """
-        SELECT v.*, ve.Patente, p.LatitudTaller, p.LongitudTaller
+        SELECT v.*, ve.Patente, ve.DeviceId, p.LatitudTaller, p.LongitudTaller
         FROM Viajes v
         JOIN 
         Vehiculos ve ON v.VehiculoId = ve.VehiculoId
@@ -59,22 +59,29 @@ def simulate_viaje(viaje_id):
             
             # Inicializa las coordenadas de inicio y fin
             start = end = None
+
+            start = obtener_ubicacion_actual_vehiculo(viaje_info.DeviceId)
             
+            if start == (None, None):
+                return jsonify({'error': 'No se pudo obtener la ubicación actual del vehículo.'}), 400
+                
             if estado_viaje == "En camino al punto de partida":
-                start = (float(viaje_info.LatitudTaller), float(viaje_info.LongitudTaller))
+                #start = (float(viaje_info.LatitudTaller), float(viaje_info.LongitudTaller))
                 end = (float(viaje_info.LatitudPuntoDePartida), float(viaje_info.LongitudPuntoDePartida))
                 
             elif estado_viaje == "Comienzo del viaje":
-                start = (float(viaje_info.LatitudPuntoDePartida), float(viaje_info.LongitudPuntoDePartida))
+                #start = (float(viaje_info.LatitudPuntoDePartida), float(viaje_info.LongitudPuntoDePartida))
                 end = (float(viaje_info.LatitudPuntoDeLlegada), float(viaje_info.LongitudPuntoDeLlegada))
                 
             elif estado_viaje == "Llegada al destino y vuelta al predio":
-                start = (float(viaje_info.LatitudPuntoDeLlegada), float(viaje_info.LongitudPuntoDeLlegada))
+                #start = (float(viaje_info.LatitudPuntoDeLlegada), float(viaje_info.LongitudPuntoDeLlegada))
                 end = (float(viaje_info.LatitudTaller), float(viaje_info.LongitudTaller))
                 
             elif estado_viaje == "Finalizado":
                 return jsonify({'error': 'Este viaje ya se ha finalizado.'}), 400
-            
+                
+            elif "En espera asistencia" in estado_viaje:
+                return jsonify({'error': 'Este viaje esta suspendido.'}), 400
             # Llamar al endpoint de generate_route
             data = {
                 'start': start,
@@ -106,7 +113,36 @@ def simulate_viaje(viaje_id):
         cursor.close()
         conn.close()
 
+
+def obtener_ubicacion_actual_vehiculo(device_id):
+    try:
+        url = f"https://demo.traccar.org/api/positions?deviceId={device_id}"
         
+        # Codificar las credenciales
+        credentials = f"{user}:{password}"
+        encoded_credentials = b64encode(credentials.encode('ascii')).decode('ascii')
+        
+        headers = {
+            "Authorization": f"Basic {encoded_credentials}"
+        }
+
+        response = requests.get(url, headers=headers)
+
+        if response.status_code == 200:
+            posiciones = response.json()
+            
+            for posicion in posiciones:
+                if posicion['deviceId'] == device_id:
+                    coordenadas.latitud = posicion['latitude']
+                    coordenadas.longitud = posicion['longitude']
+                    break
+        else:
+            print(f"Error al obtener datos de Traccar: {response.status_code}")
+    
+    except Exception as ex:
+        print(f"Excepción: {ex}")
+
+    return coordenadas
 # Function to generate points using OSRM (Open Source Routing Machine)
 def obtener_ruta_osrm(start, end):
     url = f"http://router.project-osrm.org/route/v1/driving/{start[1]},{start[0]};{end[1]},{end[0]}?overview=full&geometries=geojson"
