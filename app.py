@@ -113,8 +113,10 @@ def simulate_viaje(viaje_id):
         cursor.close()
         conn.close()
 
-
 def obtener_ubicacion_actual_vehiculo(device_id):
+    # Inicializa coordenadas como un diccionario
+    coordenadas = {'latitud': None, 'longitud': None}
+
     try:
         url = f"https://demo.traccar.org/api/positions?deviceId={device_id}"
         
@@ -133,8 +135,8 @@ def obtener_ubicacion_actual_vehiculo(device_id):
             
             for posicion in posiciones:
                 if posicion['deviceId'] == device_id:
-                    coordenadas.latitud = posicion['latitude']
-                    coordenadas.longitud = posicion['longitude']
+                    coordenadas['latitud'] = posicion['latitude']
+                    coordenadas['longitud'] = posicion['longitude']
                     break
         else:
             print(f"Error al obtener datos de Traccar: {response.status_code}")
@@ -143,6 +145,7 @@ def obtener_ubicacion_actual_vehiculo(device_id):
         print(f"Excepción: {ex}")
 
     return coordenadas
+
 # Function to generate points using OSRM (Open Source Routing Machine)
 def obtener_ruta_osrm(start, end):
     url = f"http://router.project-osrm.org/route/v1/driving/{start[1]},{start[0]};{end[1]},{end[0]}?overview=full&geometries=geojson"
