@@ -62,14 +62,14 @@ def simulate_viaje(viaje_id):
             start = end = None
 
             # Obtener la ubicación actual del vehículo
-            start = obtener_ubicacion_actual_vehiculo(viaje_info.DeviceId)
+            start = obtener_ubicacion_actual_vehiculo(int(viaje_info.DeviceId))
             
             # Verificar si se obtuvieron las coordenadas
             if start['latitud'] is None or start['longitud'] is None:
                 return jsonify({'error': 'No se pudo obtener la ubicación actual del vehículo.'}), 400
             
             # Asignar las coordenadas a start como una lista
-            start = [start['latitud'], start['longitud']]
+            start = [float(start['latitud']), float(start['longitud'])]
             
             if estado_viaje == "En camino al punto de partida":
                 #start = (float(viaje_info.LatitudTaller), float(viaje_info.LongitudTaller))
