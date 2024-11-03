@@ -42,12 +42,11 @@ def simulate_viaje(viaje_id):
     cursor = conn.cursor()
     
     try:
-        # Actualiza la consulta para incluir el JOIN con Properties
+        # Consulta actualizada para incluir el JOIN con Properties
         query = """
         SELECT v.*, ve.Patente, ve.DeviceId, p.LatitudTaller, p.LongitudTaller
         FROM Viajes v
-        JOIN 
-        Vehiculos ve ON v.VehiculoId = ve.VehiculoId
+        JOIN Vehiculos ve ON v.VehiculoId = ve.VehiculoId
         JOIN Properties p ON v.ClienteId = p.ClienteId
         WHERE v.ViajeId = ? AND p.Nombre = 'Ubicacion Taller';
         """
@@ -61,33 +60,33 @@ def simulate_viaje(viaje_id):
             # Inicializa las coordenadas de inicio y fin
             start = end = None
 
-            # Obtener la ubicación actual del vehículo
-            start = obtener_ubicacion_actual_vehiculo(int(viaje_info.DeviceId))
+            # Obtener la ubicación actual del vehículo usando el nuevo endpoint
+            start_response = requests.get(f'/ubicacion-vehiculo/{int(viaje_info.DeviceId)}')
+            start_data = start_response.json()
+
+            # Verifica si hubo un error al obtener la ubicación
+            if 'error' in start_data:
+                return jsonify({'error': start_data['error']}), 400
             
-            # Verificar si se obtuvieron las coordenadas
-            if start['latitud'] is None or start['longitud'] is None:
-                return jsonify({'error': 'No se pudo obtener la ubicación actual del vehículo.'}), 400
-            
-            # Asignar las coordenadas a start como una lista
-            start = [float(start['latitud']), float(start['longitud'])]
-            
+            # Asigna las coordenadas a start como una lista
+            start = [float(start_data['latitud']), float(start_data['longitud'])]
+
+            # Define el punto final según el estado del viaje
             if estado_viaje == "En camino al punto de partida":
-                #start = (float(viaje_info.LatitudTaller), float(viaje_info.LongitudTaller))
-                end = (float(viaje_info.LatitudPuntoDePartida), float(viaje_info.LongitudPuntoDePartida))
+                end = [float(viaje_info.LatitudPuntoDePartida), float(viaje_info.LongitudPuntoDePartida)]
                 
             elif estado_viaje == "Comienzo del viaje":
-                #start = (float(viaje_info.LatitudPuntoDePartida), float(viaje_info.LongitudPuntoDePartida))
-                end = (float(viaje_info.LatitudPuntoDeLlegada), float(viaje_info.LongitudPuntoDeLlegada))
+                end = [float(viaje_info.LatitudPuntoDeLlegada), float(viaje_info.LongitudPuntoDeLlegada)]
                 
             elif estado_viaje == "Llegada al destino y vuelta al predio":
-                #start = (float(viaje_info.LatitudPuntoDeLlegada), float(viaje_info.LongitudPuntoDeLlegada))
-                end = (float(viaje_info.LatitudTaller), float(viaje_info.LongitudTaller))
+                end = [float(viaje_info.LatitudTaller), float(viaje_info.LongitudTaller)]
                 
             elif estado_viaje == "Finalizado":
                 return jsonify({'error': 'Este viaje ya se ha finalizado.'}), 400
                 
             elif "En espera asistencia" in estado_viaje:
-                return jsonify({'error': 'Este viaje esta suspendido.'}), 400
+                return jsonify({'error': 'Este viaje está suspendido.'}), 400
+
             # Llamar al endpoint de generate_route
             data = {
                 'start': start,
@@ -118,6 +117,7 @@ def simulate_viaje(viaje_id):
     finally:
         cursor.close()
         conn.close()
+
 
 
 @app.route('/ubicacion-vehiculo/<int:device_id>', methods=['GET'])
