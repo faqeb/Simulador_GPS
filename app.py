@@ -118,6 +118,7 @@ def simulate_viaje(viaje_id):
         cursor.close()
         conn.close()
 
+
 def obtener_ubicacion_actual_vehiculo(device_id):
     # Inicializa coordenadas como un diccionario
     coordenadas = {'latitud': None, 'longitud': None}
@@ -125,15 +126,8 @@ def obtener_ubicacion_actual_vehiculo(device_id):
     try:
         url = f"https://demo.traccar.org/api/positions?deviceId={device_id}"
         
-        # Codificar las credenciales
-        credentials = f"{user}:{password}"
-        encoded_credentials = b64encode(credentials.encode('ascii')).decode('ascii')
-        
-        headers = {
-            "Authorization": f"Basic {encoded_credentials}"
-        }
-
-        response = requests.get(url, headers=headers)
+        # Realiza la solicitud con autenticación básica
+        response = requests.get(url, auth=HTTPBasicAuth(user, password))
 
         if response.status_code == 200:
             posiciones = response.json()
