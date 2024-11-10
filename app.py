@@ -80,7 +80,7 @@ def simulate_viaje(viaje_id):
             elif estado_viaje == "Comienzo del viaje":
                 end = [float(viaje_info.LatitudPuntoDeLlegada), float(viaje_info.LongitudPuntoDeLlegada)]
                 
-            elif estado_viaje == "Llegada al destino y vuelta al predio":
+            elif estado_viaje == "Llegada al destino y vuelta al predio" or estado_viaje == "Cancelado" or estado_viaje == "Vuelta al predio para mantenimiento correctivo":
                 end = [float(viaje_info.LatitudTaller), float(viaje_info.LongitudTaller)]
                 
             elif estado_viaje == "Finalizado":
