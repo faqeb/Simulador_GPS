@@ -79,7 +79,7 @@ def simulate_viaje(viaje_id):
             elif estado_viaje == "Comienzo del viaje":
                 end = [float(viaje_info.LatitudPuntoDeLlegada), float(viaje_info.LongitudPuntoDeLlegada)]
                 
-            elif "vuelta al predio" in estado_viaje:
+            elif "vuelta al predio" in estado_viaje or "Regreso al predio" in estado_viaje:
                 end = [float(viaje_info.LatitudPredio), float(viaje_info.LongitudPredio)]
                 
             elif estado_viaje == "Finalizado":
