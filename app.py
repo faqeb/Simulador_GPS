@@ -44,11 +44,10 @@ def simulate_viaje(viaje_id):
     try:
         # Consulta actualizada para incluir el JOIN con Properties
         query = """
-        SELECT v.*, ve.Patente, ve.DeviceId, p.LatitudTaller, p.LongitudTaller
+        SELECT v.*, ve.Patente, ve.DeviceId, v.LatitudPredio, v.LongitudPredio
         FROM Viajes v
         JOIN Vehiculos ve ON v.VehiculoId = ve.VehiculoId
-        JOIN Properties p ON v.ClienteId = p.ClienteId
-        WHERE v.ViajeId = ? AND p.Nombre = 'Ubicacion Taller';
+        WHERE v.ViajeId = ? ;
         """
         
         cursor.execute(query, (viaje_id,))
@@ -80,8 +79,8 @@ def simulate_viaje(viaje_id):
             elif estado_viaje == "Comienzo del viaje":
                 end = [float(viaje_info.LatitudPuntoDeLlegada), float(viaje_info.LongitudPuntoDeLlegada)]
                 
-            elif estado_viaje == "Llegada al destino y vuelta al predio" or estado_viaje == "Cancelado" or estado_viaje == "Vuelta al predio para mantenimiento correctivo":
-                end = [float(viaje_info.LatitudTaller), float(viaje_info.LongitudTaller)]
+            elif "vuelta al predio" in estado_viaje:
+                end = [float(viaje_info.LatitudPredio), float(viaje_info.LongitudPredio)]
                 
             elif estado_viaje == "Finalizado":
                 return jsonify({'error': 'Este viaje ya se ha finalizado.'}), 400
