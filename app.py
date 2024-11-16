@@ -204,8 +204,16 @@ def generate_route():
     end = data.get('end')      # Coordenadas de destino (lat, lon)
     id = data.get('id')        # ID del vehículo
 
-    if not start or not end or not id:
-        return jsonify({'error': 'Se necesita start, end, y id'}), 400
+    missing_data = []
+    if not start:
+        missing_data.append('start (coordenadas de inicio)')
+    if not end:
+        missing_data.append('end (coordenadas de destino)')
+    if not id:
+        missing_data.append('id (ID del vehículo)')
+
+    if missing_data:
+        return jsonify({'error': f'Faltan los siguientes datos: {", ".join(missing_data)}'}), 400
 
     # Obtener la ruta usando OSRM
     points = obtener_ruta_osrm(start, end)
