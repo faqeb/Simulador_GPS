@@ -150,9 +150,9 @@ def obtener_ubicacion_actual_vehiculo(device_id):
     return jsonify(coordenadas)
 
 #Actualiza la ultima ubicacion del vehiculo de la patente dada a la ubicacion del predio del cliente
-@app.route('/ubicar_vehiculo_en_predio/<int:patente>', methods=['GET'])
+@app.route('/ubicar_vehiculo_en_predio', methods=['GET'])
 def ubicar_vehiculo_en_predio(patente):
-    # Inicializa coordenadas como un diccionario
+    patente = request.args.get('patente', type=str)
 
     conn = get_db_connection()
     cursor = conn.cursor()
