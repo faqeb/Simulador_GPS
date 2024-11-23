@@ -150,10 +150,8 @@ def obtener_ubicacion_actual_vehiculo(device_id):
     return jsonify(coordenadas)
 
 #Actualiza la ultima ubicacion del vehiculo de la patente dada a la ubicacion del predio del cliente
-@app.route('/ubicar_vehiculo_en_predio', methods=['GET'])
-def ubicar_vehiculo_en_predio():
-    # Obtener el parámetro 'patente' desde los argumentos de la URL
-    patente = request.args.get('patente', type=str)
+@app.route('/ubicar_vehiculo_en_predio/<string:patente>', methods=['GET'])
+def ubicar_vehiculo_en_predio(patente):
     if not patente:
         return jsonify({'error': 'Se requiere el parámetro patente'}), 400
 
@@ -203,7 +201,6 @@ def ubicar_vehiculo_en_predio():
     finally:
         cursor.close()
         conn.close()
-
 
 # Funcion para generar ruta con OSRM (Open Source Routing Machine)
 def obtener_ruta_osrm(start, end):
