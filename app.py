@@ -35,14 +35,15 @@ app.config['ConnectionStrings'] = {
 def get_db_connection():
     conn = pyodbc.connect(app.config['ConnectionStrings']['DNS'])
     return conn
-
+#Endpoint principal para simular un viaje cargado nuestro proyecto, simula los tramos que realizaria una persona segun los estados del viaje, 
+#por ejemplo de  predio a inicio hasta que cambie a un estado que requiera un tramo diferente
 @app.route('/simulate-viaje/<int:viaje_id>', methods=['GET'])
 def simulate_viaje(viaje_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
-        # Consulta actualizada para incluir el JOIN con Properties
+        # Consulta actualizada
         query = """
         SELECT v.*, ve.Patente, ve.DeviceId, v.LatitudPredio, v.LongitudPredio
         FROM Viajes v
@@ -120,7 +121,7 @@ def simulate_viaje(viaje_id):
         conn.close()
 
 
-
+#Obtenemos la ultima ubicacion conocida del vehiculo, para disminuir errores y dar versatilidad simulate_viaje
 @app.route('/ubicacion-vehiculo/<int:device_id>', methods=['GET'])
 def obtener_ubicacion_actual_vehiculo(device_id):
     # Inicializa coordenadas como un diccionario
@@ -148,10 +149,48 @@ def obtener_ubicacion_actual_vehiculo(device_id):
 
     return jsonify(coordenadas)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+#Actualiza la ultima ubicacion del vehiculo de la patente dada a la ubicacion del predio del cliente
+@app.route('/ubicar_vehiculo_en_predio/<int:patente>', methods=['GET'])
+def ubicar_vehiculo_en_predio(patente):
+    # Inicializa coordenadas como un diccionario
 
-# Function to generate points using OSRM (Open Source Routing Machine)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+   
+    try:
+        # Consulta para obtener las coordenadas
+        query = """
+        SELECT p.LongitudTaller, p.LatitudTaller
+        FROM Properties p
+        JOIN Vehiculos ve ON p.ClienteId = ve.ClienteId
+        WHERE ve.Patente = ?
+        AND p.LongitudTaller IS NOT NULL;
+        """
+        cursor.execute(query, (patente,))
+        ubicacion_taller = cursor.fetchone()
+        
+        if ubicacion_taller:
+            lat = ubicacion_taller[1]  # La latitud está en el índice 1 de la tupla
+            lon = ubicacion_taller[0]  # La longitud está en el índice 0 de la tupla
+                    
+            # Construir la URL con los valores dinámicos
+            url = f'https://simulador-gps.onrender.com/update-gps-location?lat={lat}&lon={lon}&id={patente}'
+        
+            # Realizar la solicitud GET
+            response = requests.get(url)
+            
+            if response.status_code != 200:
+                return jsonify({'error': 'Error al actualizar la ubicacion', 'details': response.json()}), response.status_code
+
+            return jsonify({'message': 'Ubicacion actualizada correctamente', 'data': data}), 200
+        else:
+            return jsonify({'error': 'Patente o ubicacion del predio no registrada'}), 404
+
+    finally:
+        cursor.close()
+        conn.close()
+
+# Funcion para generar ruta con OSRM (Open Source Routing Machine)
 def obtener_ruta_osrm(start, end):
     url = f"http://router.project-osrm.org/route/v1/driving/{start[1]},{start[0]};{end[1]},{end[0]}?overview=full&geometries=geojson"
     
@@ -186,7 +225,7 @@ def send(id, _time, lat, lon, altitude, course, speed, battery, alarm, ignition,
     params = {k: v for k, v in params.items() if v is not None}
     requests.get(server, params=params)
 
-# Calculate course between two points
+# calcular direccionamiento
 def calculate_course(lat1, lon1, lat2, lon2):
     lat1 = lat1 * math.pi / 180
     lon1 = lon1 * math.pi / 180
@@ -196,13 +235,13 @@ def calculate_course(lat1, lon1, lat2, lon2):
     x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(lon2 - lon1)
     return (math.atan2(y, x) % (2 * math.pi)) * 180 / math.pi
 
-# Endpoint to generate a route between two points using OSRM
+# Endpoint para generar ruta a partir de dos pares de coordenadas, y con patente para asociarlo a un vehiculo OSRM
 @app.route('/generate-route', methods=['POST'])
 def generate_route():
     data = request.get_json()
     start = data.get('start')  # Coordenadas de inicio (lat, lon)
     end = data.get('end')      # Coordenadas de destino (lat, lon)
-    id = data.get('id')        # ID del vehículo
+    id = data.get('id')        # ID del vehículo/patente
 
     missing_data = []
     if not start:
@@ -226,11 +265,11 @@ def generate_route():
 
     return jsonify({'route': points})
 
-# Endpoint to start the simulation
+# Endpoint para empezar simulación de una ruta ya generada
 @app.route('/start-simulation', methods=['POST'])
 def start_simulation():
     data = request.get_json()
-    id = data.get('id')  # The ID of the vehicle
+    id = data.get('id')  # patente del vehiculo
 
     if not id or id not in routes:
         return jsonify({'error': 'Proporcionar un ID que tenga asociado una ruta'}), 400
@@ -277,6 +316,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
+#cargar puntos en el historial de traccar, sirvió para testear la visual viajes en fechas pasadas sin la necesidad de esperar
 def send_trip(id, timestamp, lat, lon, speed):
     params = {
         'id': id,
@@ -289,6 +329,7 @@ def send_trip(id, timestamp, lat, lon, speed):
     # Hacer la solicitud POST con autenticación
     requests.get(server,  params=params)
 
+#realiza los envíos de todos los puntos de un ruta generada, con la misma función obtener_ruta_osrm, en la fecha introducida, también debe pasar la patente
 @app.route('/upload-trip', methods=['GET'])
 def upload_trip():
     id = request.args.get('id', type=str)
@@ -332,7 +373,7 @@ def upload_trip():
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
 
-
+#actualiza la ubicacion actual de todos los dispositivos registrardos en nuestro traccar a una ubicacion estipulada en la funcion, sirvio para que todos los dispositvos tuvieran una ubicacion registrada
 @app.route('/update-devices-location', methods=['POST'])
 def update_devices_location():
     traccar_url = 'http://demo.traccar.org/api/devices'
@@ -378,7 +419,7 @@ def update_devices_location():
 
     from decimal import Decimal
 
-# Endpoint to update device location via GET request
+# Endpoint para actulizar la ubicacion de un dispositivo, segun la patente y las coordenadas lat y lon
 @app.route('/update-gps-location', methods=['GET'])
 def update_location():
     # Obtener los parámetros de la URL
@@ -410,6 +451,7 @@ def update_location():
 
     return jsonify({'message': f'Ubicación del dispositivo {id} actualizada a lat: {lat}, lon: {lon}'}), 200
 
+#genera una ruta y la carga para todos los dispositivos segun la fecha introducida
 @app.route('/upload-and-generate', methods=['POST'])
 def upload_and_generate():
     start = request.json.get('start')  # Coordenadas de inicio (lat, lon)
