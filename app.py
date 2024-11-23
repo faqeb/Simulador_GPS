@@ -151,14 +151,17 @@ def obtener_ubicacion_actual_vehiculo(device_id):
 
 #Actualiza la ultima ubicacion del vehiculo de la patente dada a la ubicacion del predio del cliente
 @app.route('/ubicar_vehiculo_en_predio', methods=['GET'])
-def ubicar_vehiculo_en_predio(patente):
+def ubicar_vehiculo_en_predio():
+    # Obtener el parámetro 'patente' desde los argumentos de la URL
     patente = request.args.get('patente', type=str)
+    if not patente:
+        return jsonify({'error': 'Se requiere el parámetro patente'}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor()
-   
+    
     try:
-        # Consulta para obtener las coordenadas
+        # Consulta para obtener las coordenadas del taller
         query = """
         SELECT p.LongitudTaller, p.LatitudTaller
         FROM Properties p
@@ -170,25 +173,37 @@ def ubicar_vehiculo_en_predio(patente):
         ubicacion_taller = cursor.fetchone()
         
         if ubicacion_taller:
-            lat = ubicacion_taller[1]  # La latitud está en el índice 1 de la tupla
-            lon = ubicacion_taller[0]  # La longitud está en el índice 0 de la tupla
-                    
-            # Construir la URL con los valores dinámicos
+            lat = ubicacion_taller[1]  # Latitud en el índice 1
+            lon = ubicacion_taller[0]  # Longitud en el índice 0
+
+            # Construir la URL para el simulador GPS
             url = f'https://simulador-gps.onrender.com/update-gps-location?lat={lat}&lon={lon}&id={patente}'
-        
+
             # Realizar la solicitud GET
             response = requests.get(url)
-            
-            if response.status_code != 200:
-                return jsonify({'error': 'Error al actualizar la ubicacion', 'details': response.json()}), response.status_code
 
-            return jsonify({'message': 'Ubicacion actualizada correctamente', 'data': data}), 200
+            # Manejar la respuesta del simulador
+            if response.status_code != 200:
+                try:
+                    error_details = response.json()
+                except ValueError:
+                    error_details = {'message': 'Error del servidor'}
+                return jsonify({'error': 'Error al actualizar la ubicacion', 'details': error_details}), response.status_code
+
+            return jsonify({
+                'message': 'Ubicacion actualizada correctamente',
+                'data': {'lat': lat, 'lon': lon}
+            }), 200
         else:
             return jsonify({'error': 'Patente o ubicacion del predio no registrada'}), 404
+
+    except Exception as e:
+        return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
 
     finally:
         cursor.close()
         conn.close()
+
 
 # Funcion para generar ruta con OSRM (Open Source Routing Machine)
 def obtener_ruta_osrm(start, end):
